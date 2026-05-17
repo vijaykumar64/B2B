@@ -1,0 +1,217 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Shared Helper Functions
+    // ===============================================================
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "singeakash2020@gmail.com" ||
+        request.auth.token.email == "akash@visionaryowners.com"
+      );
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // ===============================================================
+    // Entity Validations
+    // ===============================================================
+
+    function isValidOpportunity(data) {
+      return data.keys().hasAll(['category', 'type', 'owner_uid', 'investment_range']) &&
+             data.category is string && data.category.size() <= 100 &&
+             data.type in ['brand', 'dealership', 'distribution'] &&
+             data.owner_uid is string && data.owner_uid.size() <= 128 &&
+             data.investment_range is string && data.investment_range.size() <= 100 &&
+             (!data.keys().contains('brand_name') || (data.brand_name is string && data.brand_name.size() <= 200)) &&
+             (!data.keys().contains('description') || (data.description is string && data.description.size() <= 10000));
+    }
+
+    function isValidApplication(data) {
+      return data.keys().hasAll(['opportunityId', 'userId', 'status', 'owner_uid']) &&
+             isValidId(data.opportunityId) &&
+             isValidId(data.userId) &&
+             data.status in ['viewed', 'pending', 'reviewing', 'shortlisted', 'rejected', 'completed'] &&
+             data.owner_uid is string && data.owner_uid.size() <= 128;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+             data.email is string && data.email.size() <= 256 &&
+             data.role in ['investor', 'brand_owner', 'admin'];
+    }
+
+    function isValidConversation(data) {
+      return data.keys().hasAll(['investor_uid', 'brand_uid', 'opportunityId']) &&
+             isValidId(data.investor_uid) &&
+             isValidId(data.brand_uid) &&
+             isValidId(data.opportunityId);
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['chatId', 'senderId', 'text', 'timestamp']) &&
+             isValidId(data.chatId) &&
+             isValidId(data.senderId) &&
+             data.text is string && data.text.size() <= 5000;
+    }
+
+    function isValidActivity(data) {
+      return data.keys().hasAll(['userId', 'type', 'timestamp']) &&
+             isValidId(data.userId) &&
+             data.timestamp is string;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['userId', 'title', 'message', 'type', 'read', 'createdAt']) &&
+             isValidId(data.userId) &&
+             data.read is bool;
+    }
+    
+    function isValidCallback(data) {
+      return data.keys().hasAll(['userId', 'userName', 'userPhone', 'status', 'timestamp']) &&
+             isValidId(data.userId) &&
+             data.status in ['pending', 'contacted', 'closed'];
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // --- Opportunities ---
+    match /opportunities/{opportunityId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidId(opportunityId) && 
+                    isValidOpportunity(incoming()) && 
+                    (isAdmin() || incoming().owner_uid == request.auth.uid);
+      allow update: if isSignedIn() && isValidOpportunity(incoming()) && (
+        isAdmin() || (
+          existing().owner_uid == request.auth.uid && 
+          incoming().owner_uid == existing().owner_uid &&
+          (
+            // Action: Edit Listing
+            incoming().diff(existing()).affectedKeys().hasOnly(['brand_name', 'category', 'description', 'investment_range', 'location', 'image', 'brand_logo_url', 'space_req', 'roiMonths']) ||
+            // Action: Admin Verification (only admin)
+            (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['is_verified', 'status']))
+          )
+        )
+      );
+      allow delete: if isAdmin();
+    }
+
+    // --- Applications ---
+    match /applications/{applicationId} {
+      allow create: if isSignedIn() && isValidId(applicationId) && 
+                    isValidApplication(incoming()) &&
+                    (incoming().userId == request.auth.uid || isAdmin());
+      
+      allow get, list: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.owner_uid == request.auth.uid ||
+        isAdmin()
+      );
+      
+      allow update: if isSignedIn() && isValidApplication(incoming()) && (
+        isAdmin() ||
+        // Brand Owner updates status
+        (existing().owner_uid == request.auth.uid && incoming().userId == existing().userId && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+        // User retracts/updates (if allowed)
+        (existing().userId == request.auth.uid && incoming().owner_uid == existing().owner_uid &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+      );
+    }
+
+    // --- Conversations ---
+    match /conversations/{chatId} {
+      allow create: if isSignedIn() && isValidId(chatId) && isValidConversation(incoming()) &&
+                    (incoming().investor_uid == request.auth.uid || incoming().brand_uid == request.auth.uid || isAdmin());
+      
+      allow get, list: if isSignedIn() && (
+        resource.data.investor_uid == request.auth.uid || 
+        resource.data.brand_uid == request.auth.uid ||
+        isAdmin()
+      );
+
+      allow update: if isSignedIn() && isValidConversation(incoming()) && (
+        isAdmin() ||
+        (existing().investor_uid == request.auth.uid || existing().brand_uid == request.auth.uid) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['unreadCount', 'lastMessage', 'lastMessageTimestamp', 'message_history', 'status'])
+      );
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && (
+          get(/databases/$(database)/documents/conversations/$(chatId)).data.investor_uid == request.auth.uid ||
+          get(/databases/$(database)/documents/conversations/$(chatId)).data.brand_uid == request.auth.uid ||
+          isAdmin()
+        );
+        allow create: if isSignedIn() && isValidId(messageId) &&
+                      isValidMessage(incoming()) &&
+                      incoming().senderId == request.auth.uid &&
+                      (get(/databases/$(database)/documents/conversations/$(chatId)).data.investor_uid == request.auth.uid ||
+                       get(/databases/$(database)/documents/conversations/$(chatId)).data.brand_uid == request.auth.uid);
+      }
+    }
+
+    // --- Users ---
+    match /users/{userId} {
+      allow read: if isSignedIn() && (userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && userId == request.auth.uid && isValidUser(incoming());
+      allow update: if isSignedIn() && (userId == request.auth.uid || isAdmin()) && (
+        isAdmin() || 
+        (incoming().role == existing().role && // Prevent self-role-assignment
+         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'location', 'interestedCategories', 'investmentRange', 'investment_range', 'state', 'district', 'lastActive']))
+      );
+    }
+
+    // --- Notifications & Callbacks ---
+    match /notifications/{notificationId} {
+      allow create: if isSignedIn();
+      allow list, get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+    }
+
+    match /callbacks/{callbackId} {
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow list, get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+    }
+
+    // --- Activities ---
+    match /activities/{activityId} {
+      allow create: if isValidActivity(incoming()) && (
+        !isSignedIn() || incoming().userId == request.auth.uid
+      );
+      allow list, get: if isAdmin();
+    }
+  }
+}

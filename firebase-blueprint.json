@@ -1,0 +1,288 @@
+{
+  "entities": {
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "A brand partnership business opportunity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "brand_name": { "type": "string" },
+        "brand_logo_url": { "type": "string" },
+        "category": { "type": "string" },
+        "type": { "type": "string", "enum": ["brand"] },
+        "description": { "type": "string" },
+        "investment_range": { "type": "string" },
+        "space_req": { "type": "string" },
+        "roiMonths": { "type": "number" },
+        "location": { "type": "string" },
+        "image": { "type": "string" },
+        "is_verified": { "type": "boolean" },
+        "owner_uid": { "type": "string" },
+        "gst_status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "gst_certificate_url": { "type": "string" },
+        "response_time_score": { "type": "number" },
+        "status": { "type": "string", "enum": ["draft", "submitted", "verified"] }
+      },
+      "required": ["category", "type", "investment_range", "owner_uid"]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Query or complaint from brand owner",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "brandOwnerId": { "type": "string" },
+        "brandName": { "type": "string" },
+        "type": { "type": "string", "enum": ["query", "suggestion", "complaint", "technical"] },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "in_progress", "resolved"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] }
+      },
+      "required": ["brandOwnerId", "brandName", "type", "subject", "message", "status"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "An investor's application for an opportunity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "opportunityId": { "type": "string" },
+        "opportunityName": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "reviewing", "shortlisted", "rejected", "completed"] },
+        "dateApplied": { "type": "string", "format": "date-time" },
+        "referralCode": { "type": "string" },
+        "brandOwnerId": { "type": "string" },
+        "responses": { "type": "array" }
+      },
+      "required": ["opportunityId", "userId", "status", "brandOwnerId"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["investor", "brand_owner", "admin"] },
+        "location": { "type": "object" },
+        "investmentRange": { "type": "string" },
+        "interestedCategories": { "type": "array" },
+        "lastActive": { "type": "string", "format": "date-time" },
+        "responseCount": { "type": "number" },
+        "totalResponseTime": { "type": "number" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "ChatRoom": {
+      "title": "ChatRoom",
+      "description": "A conversation between an investor and a brand",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "investor_uid": { "type": "string" },
+        "investorName": { "type": "string" },
+        "brand_uid": { "type": "string" },
+        "brandName": { "type": "string" },
+        "opportunityId": { "type": "string" },
+        "opportunityName": { "type": "string" },
+        "message_history": { "type": "array" },
+        "lead_quality_score": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "lastMessageTimestamp": { "type": "string", "format": "date-time" },
+        "unreadCount": { "type": "object" },
+        "status": { "type": "string", "enum": ["active", "archived", "new"] }
+      },
+      "required": ["investor_uid", "brand_uid", "opportunityId"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Individual message in a chat",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "type": { "type": "string", "enum": ["text", "meeting_invite"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "meetingDetails": { "type": "object" }
+      },
+      "required": ["chatId", "senderId", "text", "type", "timestamp"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "User behavioral activity tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["view_details", "apply", "search", "interested", "view_duration"] },
+        "opportunityId": { "type": "string" },
+        "brandOwnerId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "duration": { "type": "number" },
+        "interestScore": { "type": "number" }
+      },
+      "required": ["userId", "type", "timestamp"]
+    },
+    "Influencer": {
+      "title": "Influencer",
+      "description": "Influencer program participant",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "email": { "type": "string" },
+        "totalLeads": { "type": "number" },
+        "totalConversions": { "type": "number" },
+        "earnings": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["pending", "paid"] }
+      },
+      "required": ["name", "code", "email"]
+    },
+    "FieldAgentRequest": {
+      "title": "FieldAgentRequest",
+      "description": "Request for a field agent visit in Tier 2/3 cities",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userPhone": { "type": "string" },
+        "opportunityId": { "type": "string" },
+        "opportunityName": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "assigned", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "opportunityId", "status", "createdAt"]
+    },
+    "PlatformConfig": {
+      "title": "PlatformConfig",
+      "description": "Global platform pricing and commission settings",
+      "type": "object",
+      "properties": {
+        "influencerLeadPrice": { "type": "number" },
+        "influencerConversionBonus": { "type": "number" },
+        "salesTeamCommission": { "type": "number" },
+        "fieldAgentVisitPrice": { "type": "number" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["enquiry", "status_update", "system", "meeting"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message", "type", "read", "createdAt"]
+    },
+    "Callback": {
+      "title": "Callback",
+      "description": "Call request from investor to brand",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "brandName": { "type": "string" },
+        "brandOwnerUid": { "type": "string" },
+        "opportunityId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "completed", "cancelled"] },
+        "requestedAt": { "type": "string", "format": "date-time" },
+        "type": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["userId", "brandOwnerUid", "status", "requestedAt"]
+    }
+    "Feedback": {
+      "title": "Feedback",
+      "description": "Complaint or suggestion from any user to the platform",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userRole": { "type": "string" },
+        "type": { "type": "string", "enum": ["complaint", "suggestion", "bug", "other"] },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "reviewing", "resolved"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "message", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/feedback/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "User feedback and complaints"
+    },
+    "/opportunities/{opportunityId}": {
+      "schema": "Opportunity",
+      "description": "Business opportunities"
+    },
+    "/applications/{applicationId}": {
+      "schema": "Application",
+      "description": "Lead applications"
+    },
+    "/conversations/{chatId}": {
+      "schema": "ChatRoom",
+      "description": "Messaging rooms"
+    },
+    "/conversations/{chatId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Individual messages"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/activities/{activityId}": {
+      "schema": "Activity",
+      "description": "Behavioral logs"
+    },
+    "/influencers/{influencerId}": {
+      "schema": "Influencer",
+      "description": "Influencer data"
+    },
+    "/fieldAgentRequests/{requestId}": {
+      "schema": "FieldAgentRequest",
+      "description": "Field agent visit requests"
+    },
+    "/supportTickets/{ticketId}": {
+      "schema": "SupportTicket",
+      "description": "Brand owner support requests"
+    },
+    "/config/{configId}": {
+      "schema": "PlatformConfig",
+      "description": "Global settings"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    },
+    "/callbacks/{callbackId}": {
+      "schema": "Callback",
+      "description": "Callback requests"
+    }
+  }
+}
