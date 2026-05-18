@@ -51,11 +51,12 @@ export default defineConfig(({ mode: _mode }) => {
         output: {
           manualChunks(id) {
             if (!id.includes('node_modules')) return;
-            if (id.includes('react-dom') || id.includes('react-router') || id.includes('/react/')) return 'vendor-react';
+            if (id.includes('/react/') && !id.includes('react-dom') && !id.includes('react-router') && !id.includes('react-markdown') && !id.includes('react-is')) return 'vendor-react';
+            if (id.includes('react-dom')) return 'vendor-react-dom';
+            if (id.includes('react-router')) return 'vendor-router';
             if (id.includes('motion')) return 'vendor-motion';
             if (id.includes('@tanstack')) return 'vendor-query';
             if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
-            return 'vendor';
           },
         },
       },
