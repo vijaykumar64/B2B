@@ -1,6 +1,6 @@
 import { triggerSessionExpired } from './authEvents';
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? '') + '/api';
+const API_BASE = (import.meta.env.VITE_API_URL?.replace(/\/$/, '') ?? '') + '/api';
 
 let isRefreshing = false;
 let refreshQueue: Array<(token: string) => void> = [];
